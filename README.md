@@ -153,7 +153,3 @@ To scale this service to production for high-throughput social campaigns and nat
 
 
 * **Stateless Container Deployment:** Deploy stateless Go binary containers behind an AWS Application Load Balancer (ALB) scaled dynamically via Kubernetes Horizontal Pod Autoscaling (HPA).
-
-
-
-```

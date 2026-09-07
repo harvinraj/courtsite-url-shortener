@@ -12,9 +12,8 @@ var (
 
 // Repository defines the data access contract for URL records.
 type Repository interface {
-	Save(ctx context.Context, shortener URLShortener) error
 	FindByShortKey(ctx context.Context, shortKey string) (URLShortener, error)
-	RecordVisit(ctx context.Context, key string) (URLShortener, error)
+	RecordVisitandSave(ctx context.Context, shortener URLShortener) (URLShortener, error)
 	GetRecordVisits(ctx context.Context, key string) (int64, error)
 }
 

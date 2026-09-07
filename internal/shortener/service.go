@@ -84,3 +84,14 @@ func (s *Service) Shorten(ctx context.Context, originalURL string) (URLShortener
 
 	return saved, nil
 }
+
+func (s *Service) Retrieve(ctx context.Context, key string) (int64, error) {
+
+	retrieved, err := s.repo.GetRecordVisits(ctx, key)
+	if err != nil {
+		fmt.Errorf("no short key found: %s : ", key)
+		return 0, nil
+	}
+
+	return retrieved, nil
+}

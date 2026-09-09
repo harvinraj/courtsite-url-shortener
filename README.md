@@ -1,9 +1,5 @@
 # Courtsite URL Shortener Service (v2 Architecture)
 
-A high-performance, modular URL shortening and analytics service written in idiomatic Go. Refactored from a v1 monolith into a production-grade, package-by-feature architecture using Go's standard library (`net/http`) with Go 1.22+ routing, dependency injection, and thread-safe in-memory storage.
-
----
-
 ## Technical Features Implemented
 
 * **`POST /shorten`**: Validates input syntax and performs $O(1)$ URL deduplication. If a URL is submitted for the first time, a 6-character Base64 key is generated and stored with an initial visit count of `1`. Subsequent submissions of the same URL reuse the existing short key and increment its visit count.

@@ -6,52 +6,45 @@ import (
 	"time"
 )
 
-type MemoryStore struct {
-	mu      sync.RWMutex
-	records map[string]URLShortener
+type Memory struct {
+	mu       sync.RWMutex
+	record   map[string]*URLShortener
+	urlIndex map[string]string
 }
 
-func NewMemoryStore() *MemoryStore {
-	return &MemoryStore{
-		records: make(map[string]URLShortener),
+func NewMemoryStore() *Memory {
+	return &Memory{
+		record:   make(map[string]*URLShortener),
+		urlIndex: make(map[string]string),
 	}
 }
+func (m *Memory) SaveAndRecord(ctx context.Context, shortener *URLShortener) (URLShortener, error) {
 
-func (memory *MemoryStore) RecordVisitandSave(ctx context.Context, shortener URLShortener) (URLShortener, error) {
-	memory.mu.Lock()
-	defer memory.mu.Unlock()
+	m.mu.Lock()
+	defer m.mu.Unlock()
 
-	existing, exists := memory.records[shortener.ShortKey]
-	if exists {
-		shortener.Visits = existing.Visits + 1
-		shortener.CreatedAt = time.Now()
-	} else {
-		shortener.CreatedAt = existing.CreatedAt
+	if existingKey, found := m.urlIndex[shortener.OriginalURL]; found {
+		existing := m.record[existingKey]
+		existing.Visits++
+		m.record[existingKey] = existing
+		return *existing, nil
 	}
 
-	memory.records[shortener.ShortKey] = shortener
-	return shortener, nil
-
+	shortener.CreatedAt = time.Now()
+	m.record[shortener.ShortKey] = shortener
+	m.urlIndex[shortener.OriginalURL] = shortener.ShortKey
+	return *shortener, nil
 }
 
-func (memory *MemoryStore) FindByShortKey(ctx context.Context, shortKey string) (URLShortener, error) {
-	memory.mu.RLock()
-	defer memory.mu.RUnlock()
+func (m *Memory) GetRecord(ctx context.Context, shortKey string) (URLShortener, error) {
 
-	shortener, exists := memory.records[shortKey]
-	if !exists {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	found, ok := m.record[shortKey]
+	if !ok {
 		return URLShortener{}, ErrNotFound
 	}
-	return shortener, nil
-}
 
-func (memory *MemoryStore) GetRecordVisits(ctx context.Context, key string) (int64, error) {
-	memory.mu.RLock()
-	defer memory.mu.RUnlock()
-
-	shortener, exists := memory.records[key]
-	if !exists {
-		return 0, ErrNotFound
-	}
-	return shortener.Visits, nil
+	return *found, nil
 }

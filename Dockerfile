@@ -6,7 +6,7 @@ COPY go.mod go.sum ./
 RUN go mod download
 
 COPY . .
-RUN CGO_ENABLED=0 GOOS=linux go build -o url-shortener main.go
+RUN CGO_ENABLED=0 GOOS=linux go build -o url-shortener cmd/api/main.go
 
 # Stage 2: Minimal runtime image
 FROM alpine:latest

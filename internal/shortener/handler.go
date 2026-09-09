@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"strings"
 )
 
 type Handler struct {
@@ -25,7 +24,12 @@ type ErrorResponse struct {
 	Error string `json:"error"`
 }
 
-func (h *Handler) HandleShorten(response http.ResponseWriter, request *http.Request) {
+type AnalyticRequest struct {
+	ShortKey string `json:"short_key"`
+}
+
+func (h *Handler) HandleShortener(response http.ResponseWriter, request *http.Request) {
+
 	if request.Method != http.MethodPost {
 		http.Error(response, "Method not allowed", http.StatusMethodNotAllowed)
 		return
@@ -36,47 +40,55 @@ func (h *Handler) HandleShorten(response http.ResponseWriter, request *http.Requ
 		response.Header().Set("Content-Type", "application/json")
 		response.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(response).Encode(ErrorResponse{Error: "Invalid request body"})
+		fmt.Println("Request body doest not contain url field : ", err)
 		return
 	}
 
-	saved, err := h.service.Shorten(request.Context(), req.URL)
+	saved, err := h.service.ShortenUrl(request.Context(), req.URL)
 	if err != nil {
 		response.Header().Set("Content-Type", "application/json")
 		response.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(response).Encode(ErrorResponse{Error: err.Error()})
+		fmt.Println("Error saving url : ", err)
 		return
 	}
 
 	response.Header().Set("Content-Type", "application/json")
 	response.WriteHeader(http.StatusAccepted)
 	json.NewEncoder(response).Encode(saved)
-	fmt.Printf("url saved and visits updated, original url = %s", saved.OriginalURL)
-
+	fmt.Println("url saved : " + saved.OriginalURL + " shortKey :" + saved.ShortKey)
 }
 
-func (h *Handler) HandleResolve(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+func (h *Handler) HandleAnalytics(response http.ResponseWriter, request *http.Request) {
+
+	if request.Method != http.MethodGet {
+		http.Error(response, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
-	// Extract key from path (e.g., /r/{key} or /{key})
-	parts := strings.Split(strings.TrimPrefix(r.URL.Path, "/"), "/")
-	if len(parts) == 0 || parts[0] == "" {
-		http.Error(w, "missing short key", http.StatusBadRequest)
+	var req AnalyticRequest
+	if err := json.NewDecoder(request.Body).Decode(&req); err != nil {
+		response.Header().Set("Content-Type", "application/json")
+		response.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(response).Encode(ErrorResponse{Error: "Invalid request body"})
+		fmt.Println("Request body doest not contain url field : ", err)
 		return
 	}
-	key := parts[0]
 
-	record, err := h.service.Retrieve(r.Context(), key)
+	found, err := h.service.GetShortenURL(request.Context(), req.ShortKey)
 	if err != nil {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusNotFound)
-		json.NewEncoder(w).Encode(ErrorResponse{Error: "short url not found"})
+		response.Header().Set("Content-Type", "application/json")
+		response.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(response).Encode(ErrorResponse{Error: err.Error()})
+		fmt.Println("Error saving url : ", err)
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(record)
+	response.Header().Set("Content-Type", "application/json")
+	response.WriteHeader(http.StatusAccepted)
+	json.NewEncoder(response).Encode(found)
+	fmt.Println("original url :" + found.OriginalURL)
+	fmt.Printf("visits : %d", found.Visits)
+	fmt.Println("")
+
 }

@@ -28,19 +28,19 @@ type AnalyticRequest struct {
 	ShortKey string `json:"short_key"`
 }
 
-func (h *Handler) HandleShortener(response http.ResponseWriter, request *http.Request) {
+type AnalyticResponse struct {
+	OriginalUrl string
+	Visits      int64
+}
 
-	if request.Method != http.MethodPost {
-		http.Error(response, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
+func (h *Handler) HandleShortener(response http.ResponseWriter, request *http.Request) {
 
 	var req ShortenRequest
 	if err := json.NewDecoder(request.Body).Decode(&req); err != nil {
 		response.Header().Set("Content-Type", "application/json")
 		response.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(response).Encode(ErrorResponse{Error: "Invalid request body"})
-		fmt.Println("Request body doest not contain url field : ", err)
+		fmt.Println("Request body doest not contain field (url) : ", err)
 		return
 	}
 
@@ -49,29 +49,23 @@ func (h *Handler) HandleShortener(response http.ResponseWriter, request *http.Re
 		response.Header().Set("Content-Type", "application/json")
 		response.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(response).Encode(ErrorResponse{Error: err.Error()})
-		fmt.Println("Error saving url : ", err)
+		fmt.Println("Error saving : ", err)
 		return
 	}
 
 	response.Header().Set("Content-Type", "application/json")
 	response.WriteHeader(http.StatusAccepted)
 	json.NewEncoder(response).Encode(saved)
-	fmt.Println("url saved : " + saved.OriginalURL + " shortKey :" + saved.ShortKey)
+	fmt.Println("(" + saved.OriginalURL + ") shortKey :" + saved.ShortKey)
 }
 
 func (h *Handler) HandleAnalytics(response http.ResponseWriter, request *http.Request) {
-
-	if request.Method != http.MethodGet {
-		http.Error(response, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
 
 	var req AnalyticRequest
 	if err := json.NewDecoder(request.Body).Decode(&req); err != nil {
 		response.Header().Set("Content-Type", "application/json")
 		response.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(response).Encode(ErrorResponse{Error: "Invalid request body"})
-		fmt.Println("Request body doest not contain url field : ", err)
 		return
 	}
 
@@ -80,15 +74,16 @@ func (h *Handler) HandleAnalytics(response http.ResponseWriter, request *http.Re
 		response.Header().Set("Content-Type", "application/json")
 		response.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(response).Encode(ErrorResponse{Error: err.Error()})
-		fmt.Println("Error saving url : ", err)
 		return
 	}
 
 	response.Header().Set("Content-Type", "application/json")
 	response.WriteHeader(http.StatusAccepted)
-	json.NewEncoder(response).Encode(found)
-	fmt.Println("original url :" + found.OriginalURL)
-	fmt.Printf("visits : %d", found.Visits)
-	fmt.Println("")
+	json.NewEncoder(response).Encode(&AnalyticResponse{
+		OriginalUrl: found.OriginalURL,
+		Visits:      found.Visits,
+	})
+	fmt.Printf("(%d)", found.Visits)
+	fmt.Println(found.OriginalURL)
 
 }

@@ -8,7 +8,8 @@ import (
 	"fmt"
 )
 
-var ErrInvalidURL = errors.New("invalid url")
+var ErrEmptyURL = errors.New("empty url")
+var ErrEmptyShortKey = errors.New("empty short_key")
 
 type Service struct {
 	repo Repository
@@ -29,7 +30,7 @@ func generateKey() string {
 func (s *Service) ShortenUrl(ctx context.Context, originalURL string) (URLShortener, error) {
 
 	if len(originalURL) == 0 {
-		return URLShortener{}, ErrInvalidURL
+		return URLShortener{}, ErrEmptyURL
 	}
 
 	shortKey := generateKey()
@@ -42,7 +43,7 @@ func (s *Service) ShortenUrl(ctx context.Context, originalURL string) (URLShorte
 
 	saved, err := s.repo.SaveAndRecord(ctx, shorten)
 	if err != nil {
-		fmt.Println("failed to save url : " + originalURL)
+		fmt.Println(err)
 		return URLShortener{}, err
 	}
 
@@ -52,9 +53,13 @@ func (s *Service) ShortenUrl(ctx context.Context, originalURL string) (URLShorte
 
 func (s *Service) GetShortenURL(ctx context.Context, shortKey string) (URLShortener, error) {
 
+	if shortKey == "" {
+		return URLShortener{}, ErrEmptyShortKey
+	}
+
 	found, err := s.repo.GetRecord(ctx, shortKey)
 	if err != nil {
-		fmt.Println("failed to retrieve url : " + shortKey)
+		fmt.Println(err)
 		return URLShortener{}, err
 	}
 

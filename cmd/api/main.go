@@ -1,25 +1,24 @@
 package main
 
 import (
-	"log"
-	"net/http"
+	handler "courtsite-url-shortener/internal/handler"
+	memory "courtsite-url-shortener/internal/repository/memory"
+	service "courtsite-url-shortener/internal/service"
 
-	"courtsite-url-shortener/internal/shortener"
+	"github.com/gin-gonic/gin"
 )
 
 func main() {
 	// Initialize dependencies (DI)
-	store := shortener.NewMemoryStore()
-	svc := shortener.NewService(store)
-	h := shortener.NewHandler(svc)
+	store := memory.NewMemoryStore()
+	svc := service.NewService(store)
+	h := handler.NewHTTPHandler(svc)
 
-	// Use Go 1.22+ enhanced ServeMux routing
-	mux := http.NewServeMux()
-	mux.HandleFunc("POST /shorten", h.HandleShortener)
-	mux.HandleFunc("GET /analytics", h.HandleAnalytics)
+	r := gin.Default()
 
-	log.Println("Server starting on :8080...")
-	if err := http.ListenAndServe(":8080", mux); err != nil {
-		log.Fatalf("server failed: %v", err)
-	}
+	r.POST("/shorten", h.HandleShortener)
+	r.POST("/analytics", h.HandleAnalytic)
+
+	r.Run(":8080")
+
 }
